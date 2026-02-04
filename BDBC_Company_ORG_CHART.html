@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BDBC PR Organization Chart</title>
+    <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            background: #E8E8E8;
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .company-name {
+            font-family: 'Archivo Black', sans-serif;
+            font-size: 72px;
+            color: #000000;
+            letter-spacing: 4px;
+            margin-bottom: 10px;
+        }
+
+        .chart-title {
+            font-family: 'Archivo Black', sans-serif;
+            font-size: 48px;
+            color: #000080;
+            letter-spacing: 2px;
+        }
+
+        .org-chart {
+            max-width: 1800px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .tier {
+            margin-bottom: 60px;
+            position: relative;
+            z-index: auto;
+        }
+
+        .tier-content {
+            display: flex;
+            justify-content: center;
+            align-items: stretch;
+            gap: 20px;
+            flex-wrap: wrap;
+            position: relative;
+            z-index: auto;
+        }
+
+        /* CEO tier - single card centered */
+        .tier-ceo .tier-content {
+            justify-content: center;
+        }
+
+        /* Associate VP tier - centered */
+        .tier-vp .tier-content {
+            justify-content: center;
+        }
+
+        /* Bottom tier - 5 cards in one row */
+        .tier-team .tier-content {
+            justify-content: center;
+            flex-wrap: nowrap;
+            gap: 10px;
+        }
+
+        /* Connecting lines */
+        .tier::before {
+            content: '';
+            position: absolute;
+            top: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 2px;
+            height: 30px;
+            background: #000080;
+        }
+
+        .tier-ceo::before {
+            display: none;
+        }
+
+        .tier::after {
+            content: '';
+            position: absolute;
+            bottom: -30px;
+            left: 20%;
+            right: 20%;
+            height: 2px;
+            background: #000080;
+        }
+
+        .tier-team::after {
+            display: none;
+        }
+
+        .tier-ceo::after {
+            left: 50%;
+            transform: translateX(-50%);
+            width: 2px;
+            height: 30px;
+            right: auto;
+        }
+            bottom: -30px;
+        }
+
+        .role-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            padding: 0;
+            width: 220px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: visible;
+            margin-bottom: 20px;
+            z-index: 1;
+        }
+
+        /* Make bottom tier cards narrower to fit 5 in one row */
+        .tier-team .role-card {
+            width: 170px;
+        }
+
+        .role-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 24px rgba(0, 0, 128, 0.2);
+        }
+
+        .role-card.active {
+            margin-bottom: 0;
+            z-index: 1000;
+        }
+
+        .role-header {
+            padding: 28px 20px;
+            background: #000080;
+            border-radius: 12px;
+            text-align: center;
+            position: relative;
+            min-height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: border-radius 0.3s ease;
+        }
+
+        /* When dropdown is active, remove bottom border radius for seamless connection */
+        .role-card.active .role-header {
+            border-radius: 12px 12px 0 0;
+        }
+
+        /* Adjust padding for bottom tier to fit text */
+        .tier-team .role-header {
+            padding: 20px 8px;
+            min-height: 90px;
+        }
+
+        .role-title {
+            font-family: 'Archivo Black', sans-serif;
+            font-size: 18px;
+            color: white;
+            letter-spacing: 1px;
+            line-height: 1.3;
+        }
+
+        /* Slightly smaller text for bottom tier */
+        .tier-team .role-title {
+            font-size: 14px;
+            letter-spacing: 0.5px;
+        }
+
+        .expand-btn {
+            display: none;
+        }
+
+        .overlay {
+            display: none;
+        }
+
+        .role-details {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border-radius: 0 0 12px 12px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+            padding: 20px;
+            max-height: 0;
+            overflow: hidden;
+            z-index: 1001;
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+
+        .role-details.active {
+            max-height: 500px;
+            overflow-y: auto;
+            opacity: 1;
+            padding: 20px;
+        }
+
+        /* Make sure content inside is scrollable */
+        .role-details > * {
+            position: relative;
+        }
+
+        /* Ensure scrolling works properly with visible scrollbar */
+        .role-details::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .role-details::-webkit-scrollbar-track {
+            background: #E8E8E8;
+            border-radius: 10px;
+        }
+
+        .role-details::-webkit-scrollbar-thumb {
+            background: #000080;
+            border-radius: 10px;
+        }
+
+        .role-details::-webkit-scrollbar-thumb:hover {
+            background: #000060;
+        }
+
+        /* For Firefox */
+        .role-details {
+            scrollbar-width: thin;
+            scrollbar-color: #000080 #E8E8E8;
+        }
+
+        .close-btn {
+            display: none;
+        }
+
+        .role-details-header {
+            font-family: 'Archivo Black', sans-serif;
+            font-size: 20px;
+            color: #000080;
+            margin-bottom: 16px;
+        }
+
+        .tier-badge {
+            display: inline-block;
+            background: #000080;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            font-weight: normal;
+            margin-left: 8px;
+        }
+
+        .responsibility-section {
+            margin-bottom: 20px;
+        }
+
+        .responsibility-title {
+            font-weight: 700;
+            font-size: 16px;
+            color: #000080;
+            margin-bottom: 8px;
+            padding-bottom: 4px;
+            border-bottom: 2px solid #000080;
+        }
+
+        .responsibility-list {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .responsibility-item {
+            padding: 6px 0;
+            color: #000000;
+            font-size: 15px;
+            line-height: 1.5;
+            position: relative;
+            padding-left: 20px;
+        }
+
+        .responsibility-item:before {
+            content: "•";
+            position: absolute;
+            left: 0;
+            color: #000080;
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        @media (max-width: 1200px) {
+            .tier-team .tier-content {
+                flex-wrap: wrap;
+            }
+            
+            .tier-team .role-card {
+                width: 220px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .company-name {
+                font-size: 48px;
+            }
+
+            .chart-title {
+                font-size: 32px;
+            }
+
+            .tier-content {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .role-card {
+                width: 100%;
+                max-width: 300px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="company-name">BDBC</div>
+        <div class="chart-title">Organization Chart</div>
+    </div>
+
+    <div id="overlay" class="overlay"></div>
+
+    <div class="org-chart">
+        <!-- CEO Tier -->
+        <div class="tier tier-ceo">
+            <div class="tier-content">
+                <div class="role-card">
+                    <div class="role-header">
+                        <div class="role-title">Chief Executive Officer</div>
+                    </div>
+                    <div class="role-details">
+                        <button class="close-btn" aria-label="Close">&times;</button>
+                        <div class="role-details-header">Chief Executive Officer <span class="tier-badge">Executive</span></div>
+                        
+                        <div class="responsibility-section">
+                            <div class="responsibility-title">Strategic Focus</div>
+                            <ul class="responsibility-list">
+                                <li class="responsibility-item">Vision + Leadership</li>
+                            </ul>
+                        </div>
+
+                        <div class="responsibility-section">
+                            <div class="responsibility-title">Main Function</div>
+                            <ul class="responsibility-list">
+                                <li class="responsibility-item">Set company vision and oversee all operations</li>
+                            </ul>
+                        </div>
+
+                        <div class="responsibility-section">
+                            <div class="responsibility-title">Core Responsibilities</div>
+                            <ul class="responsibility-list">
+                                <li class="responsibility-item">Define and execute company strategy</li>
+                                <li class="responsibility-item">Lead executive team and company culture</li>
+                                <li class="responsibility-item">Oversee all accounts</li>
+                                <li class="responsibility-item">Drive business development and growth</li>
+                                <li class="responsibility-item">Ensure financial performance and sustainability</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Associate VP Tier -->
+        <div class="tier tier-vp">
+            <div class="tier-content">
+                <div class="role-card">
+                    <div class="role-header">
+                        <div class="role-title">Associate Vice President</div>
+                    </div>
+                    <div class="role-details">
+                        <button class="close-btn" aria-label="Close">&times;</button>
+                        <div class="role-details-header">Associate Vice President <span class="tier-badge">Leadership</span></div>
+                        
+                        <div class="responsibility-section">
+                            <div class="responsibility-title">Strategic Focus</div>
+                            <ul class="responsibility-list">
+                                <li class="responsibility-item">Execute + Manage</li>
+                            </ul>
+                        </div>
+
+                        <div class="responsibility-section">
+                            <div class="responsibility-title">Main Function</div>
+                            <ul class="responsibility-list">
+                                <li class="responsibility-item">Work directly with CEO to manage 8-person team and help staff do their best work</li>
+                            </ul>
+                        </div>
+
+                        <div class="responsibility-section">
+                            <div class="responsibility-title">Core Responsibilities</div>
+                            <ul class="responsibility-list">
+                                <li class="responsibility-item">Oversee all accounts</li>
+                                <li class="responsibility-item">Aid in pitch ideation and execution</li>
+                                <li class="responsibility-item">Aid in target identification and communication strategy</li>
+                                <li class="responsibility-item">Help manage client relationships</li>
+                                <li class="responsibility-item">Devise and implement internal training initiatives</li>
+                                <li class="responsibility-item">Devise and implement internal incentivization initiatives</li>
+                                <li class="responsibility-item">Draw on years of experience to guide team</li>
+                                <li class="responsibility-item">Support department strategy execution</li>
+                                <li class="responsibility-item">Lead account teams</li>
+                                <li class="responsibility-item">Contribute to new business pitches</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Team Tier - All 5 roles in one row -->
+        <div class="tier tier-team">
+            <div class="tier-content">
+                <div class="role-card">
+                    <div class="role-header">
+                        <div class="role-title">Assistant</div>
+                    </div>
+                    <div class="role-details">
+                        <button class="close-btn" aria-label="Close">&times;</button>
+                        <div class="role-details-header">Assistant <span class="tier-badge">Entry Level</span></div>
+                        
+                        <div class="responsibility-section">
+                            <div class="responsibility-title">Strategic Focus</div>
+                            <ul class="responsibility-list">
+                                <li class="responsibility-item">Learn</li>
+                            </ul>
+                        </div>
+
+                        <div class="responsibility-section">
+                            <div class="responsibility-title">Main Function</div>
+                            <ul class="responsibility-list">
+                                <li class="responsibility-item">Support PR activities and content creation</li>
+                            </ul>
+                        </div>
+
+                        <div class="responsibility-section">
+                            <div class="responsibility-title">Client Calls</div>
+                            <ul class="responsibility-list">
+                                <li class="responsibility-item">Take notes for post-call 'Action Items' email</li>
+                            </ul>
+                        </div>
+
+                        <div class="responsibility-section">
+                            <div class="responsibility-title">Client Communications</div>
+                            <ul class="responsibility-list">
+                                <li class="responsibility-item">CC'd on all communications, stay abreast of current campaigns/issues</li>
+                            </ul>
+                        </div>
+
+                        <div class="responsibility-section">
+                            <div class="responsibility-title">Samples</div>
+                            <ul class="responsibility-list">
+                                <li class="responsibility-item">Input requests, tracking and monitor follow-ups</li>
+                                <li class="responsibility-item">Send updates to sample recipients</li>
+                                <li class="responsibility-item">Update editor info on CDB; size, address, NY/LA</li>
+                            </ul>
+                        </div>
+
+                        <div class="responsibility-section">
+                            <div class="responsibility-title">PR Coverage</div>
+                            <ul class="responsibility-list">
+                                <li class="responsibility-item">Begin familiarizing with tiers of publications (Tier 1-3). Differentiate writers by beat and match accuracy to target lists based on their current work/write-ups</li>
+                            </ul>
+                        </div>
+
+                        <div class="responsibility-section">
+                            <div class="responsibility-title">PR Coverage Docs</div>
+                            <ul class="responsibility-list">
+                                <li class="responsibility-item">Add new links to PR Recap docs. Clean up PR Recap while you're in there (add missing author credits, check formatting, spelling, product names)</li>
+                            </ul>
+                        </div>
+
+                        <div class="responsibility-section">
+                            <div class="responsibility-title">Internal Database</div>
+                            <ul class="responsibility-list">
+                                <li class="responsibility-item">Maintain media lists and contact databases</li>
+                                <li class="responsibility-item">Discovering Editors: Discover potential writers: Add new names to the 'New' tab on the CDB</li>
+                            </ul>
+                        </div>
+
+                        <div class="responsibility-section">
+                            <div class="responsibility-title">Socials & IG</div>
+                            <ul class="responsibility-list">
+                                <li class="responsibility-item">One post a day (around 1pm est). Follow new editors</li>
+                                <li class="responsibility-item">Keep tabs on editors for potential pitch angles</li>
+                                <li class="responsibility-item">Monitor Socials & Present posting schedule for the following week every Friday</li>
+                            </ul>
+                        </div>
+
+                        <div class="responsibility-section">
+                            <div class="responsibility-title">Pitching</div>
+                            <ul class="responsibility-list">
+                                <li class="responsibility-item">Using the action items emails to see what that week's pitches are, choose one to write yourself - have your choice ready by our Monday call</li>
+                            </ul>
+                        </div>
+
+                        <div class="responsibility-section">
+                            <div class="responsibility-title">Outreach</div>
+                            <ul class="responsibility-list">
+                                <li class="responsibility-item">New target search. Choose one pub each week</li>
+                            </ul>
+                        </div>
+
+                        <div class="responsibility-section">
+                            <div class="responsibility-title">Internal Leadership</div>
+                            <ul class="responsibility-list">
+                                <li class="responsibility-item">Support team processes</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="role-card">
+                    <div class="role-header">
+                        <div class="role-title">Junior Account Manager</div>
+                    </div>
+                    <div class="role-details">
+                        <button class="close-btn" aria-label="Close">&times;</button>
+                        <div class="role-details-header">Junior Account Manager <span class="tier-badge">Growing</span></div>
+                        
+                        <div class="responsibility-section">
+                            <div class="responsibility-title">Strategic Focus</div>
+                            <ul class="responsibility-list">
+                                <li class="responsibility-item">Execute + Learn</li>
+                            </ul>
+                        </div>
+
+                        <div class="responsibility-section">
+                            <div class="responsibility-title">Main Function</div>
+                            <ul class="responsibility-list">
+                                <li class="responsibility-item">Execute PR campaigns and develop strategic skills</li>
+                            </ul>
+                        </div>
+
+                        <div class="responsibility-section">
+                            <div class="responsibility-title">Client Calls</div>
+                            <ul class="responsibility-list">
+                                <li class="responsibility-item">Attend all client calls and participate actively</li>
+                                <li class="responsibility-item">Take detailed notes and create action items</li>
+                            </ul>
+                        </div>
+
+                        <div class="responsibility-section">
+                            <div class="responsibility-title">Campaign Execution</div>
+                            <ul class="responsibility-list">
+                                <li class="responsibility-item">Lead day-to-day campaign activities</li>
+                                <li class="responsibility-item">Develop and send pitches to media contacts</li>
+                                <li class="responsibility-item">Track campaign performance and results</li>
+                            </ul>
+                        </div>
+
+                        <div class="responsibility-section">
+                            <div class="responsibility-title">Media Relations</div>
+                            <ul class="responsibility-list">
+                                <li class="responsibility-item">Build relationships with Tier 2-3 media contacts</li>
+                                <li class="responsibility-item">Respond to media inquiries promptly</li>
+                                <li class="responsibility-item">Follow up on pitch opportunities</li>
+                            </ul>
+                        </div>
+
+                        <div class="responsibility-section">
+                            <div class="responsibility-title">Content Development</div>
+                            <ul class="responsibility-list">
+                                <li class="responsibility-item">Draft press releases and pitch materials</li>
+                                <li class="responsibility-item">Create media lists for campaigns</li>
+                                <li class="responsibility-item">Maintain brand messaging consistency</li>
+                            </ul>
+                        </div>
+
+                        <div class="responsibility-section">
+                            <div class="responsibility-title">Reporting</div>
+                            <ul class="responsibility-list">
+                                <li class="responsibility-item">Update coverage reports weekly</li>
+                                <li class="responsibility-item">Track metrics and KPIs</li>
+                                <li class="responsibility-item">Assist in monthly client reporting</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="role-card">
+                    <div class="role-header">
+                        <div class="role-title">Account Manager</div>
+                    </div>
+                    <div class="role-details">
+                        <button class="close-btn" aria-label="Close">&times;</button>
+                        <div class="role-details-header">Account Manager <span class="tier-badge">Mid-Level</span></div>
+                        
+                        <div class="responsibility-section">
+                            <div class="responsibility-title">Strategic Focus</div>
+                            <ul class="responsibility-list">
+                                <li class="responsibility-item">Execute + Strategize</li>
+                            </ul>
+                        </div>
+
+                        <div class="responsibility-section">
+                            <div class="responsibility-title">Main Function</div>
+                            <ul class="responsibility-list">
+                                <li class="responsibility-item">Lead client accounts and develop strategic PR campaigns</li>
+                            </ul>
+                        </div>
+
+                        <div class="responsibility-section">
+                            <div class="responsibility-title">Client Management</div>
+                            <ul class="responsibility-list">
+                                <li class="responsibility-item">Serve as primary day-to-day client contact</li>
+                                <li class="responsibility-item">Lead client calls and presentations</li>
+                                <li class="responsibility-item">Manage client expectations and satisfaction</li>
+                                <li class="responsibility-item">Identify opportunities for account growth</li>
+                            </ul>
+                        </div>
+
+                        <div class="responsibility-section">
+                            <div class="responsibility-title">Strategic Planning</div>
+                            <ul class="responsibility-list">
+                                <li class="responsibility-item">Develop comprehensive PR strategies</li>
+                                <li class="responsibility-item">Create campaign timelines and deliverables</li>
+                                <li class="responsibility-item">Identify new opportunities and angles</li>
+                                <li class="responsibility-item">Contribute to new business pitches</li>
+                            </ul>
+                        </div>
+
+                        <div class="responsibility-section">
+                            <div class="responsibility-title">Media Relations</div>
+                            <ul class="responsibility-list">
+                                <li class="responsibility-item">Cultivate Tier 1-2 media relationships</li>
+                                <li class="responsibility-item">Secure high-value placements</li>
+                                <li class="responsibility-item">Handle sensitive media situations</li>
+                            </ul>
+                        </div>
+
+                        <div class="responsibility-section">
+                            <div class="responsibility-title">Team Leadership</div>
+                            <ul class="responsibility-list">
+                                <li class="responsibility-item">Supervise junior team members</li>
+                                <li class="responsibility-item">Provide mentorship and training</li>
+                                <li class="responsibility-item">Review and approve team deliverables</li>
+                            </ul>
+                        </div>
+
+                        <div class="responsibility-section">
+                            <div class="responsibility-title">Reporting & Analytics</div>
+                            <ul class="responsibility-list">
+                                <li class="responsibility-item">Prepare comprehensive monthly reports</li>
+                                <li class="responsibility-item">Analyze campaign performance</li>
+                                <li class="responsibility-item">Present insights and recommendations</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="role-card">
+                    <div class="role-header">
+                        <div class="role-title">Affiliate Manager</div>
+                    </div>
+                    <div class="role-details">
+                        <button class="close-btn" aria-label="Close">&times;</button>
+                        <div class="role-details-header">Affiliate Manager <span class="tier-badge">Specialist</span></div>
+                        
+                        <div class="responsibility-section">
+                            <div class="responsibility-title">Strategic Focus</div>
+                            <ul class="responsibility-list">
+                                <li class="responsibility-item">Execute + Optimize</li>
+                            </ul>
+                        </div>
+
+                        <div class="responsibility-section">
+                            <div class="responsibility-title">Main Function</div>
+                            <ul class="responsibility-list">
+                                <li class="responsibility-item">Manage affiliate programs and drive revenue partnerships</li>
+                            </ul>
+                        </div>
+
+                        <div class="responsibility-section">
+                            <div class="responsibility-title">Core Responsibilities</div>
+                            <ul class="responsibility-list">
+                                <li class="responsibility-item">Help clients set-up new affiliate programs, or audit clients' existing affiliate programs, and advise on and execute best practices</li>
+                                <li class="responsibility-item">Manage program approvals / rejections for multiple clients</li>
+                                <li class="responsibility-item">Pitch publication affiliate managers new products, sales, best-sellers, et al</li>
+                                <li class="responsibility-item">Negotiate with publication affiliate managers on commission rates, list rankings, and adding clients to existing articles</li>
+                                <li class="responsibility-item">Provide clients with detailed yet easy-to-understand weekly reporting that includes revenue generated, commissions paid, click activity, and top partners</li>
+                                <li class="responsibility-item">Answer all client questions in a timely manner</li>
+                            </ul>
+                        </div>
+
+                        <div class="responsibility-section">
+                            <div class="responsibility-title">Success Metrics</div>
+                            <ul class="responsibility-list">
+                                <li class="responsibility-item">A measurable increase in monthly PR placements for our clients in tier 1 publications</li>
+                                <li class="responsibility-item">A measurable increase in direct affiliate partnerships established with tier 1 publications</li>
+                                <li class="responsibility-item">A measurable increase in the percentage of revenue driven by PR placements for our clients</li>
+                                <li class="responsibility-item">Effectively and expeditiously communicating with clients and team members</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="role-card">
+                    <div class="role-header">
+                        <div class="role-title">Senior Account Manager</div>
+                    </div>
+                    <div class="role-details">
+                        <button class="close-btn" aria-label="Close">&times;</button>
+                        <div class="role-details-header">Senior Account Manager <span class="tier-badge">Senior</span></div>
+                        
+                        <div class="responsibility-section">
+                            <div class="responsibility-title">Strategic Focus</div>
+                            <ul class="responsibility-list">
+                                <li class="responsibility-item">Strategize + Lead</li>
+                            </ul>
+                        </div>
+
+                        <div class="responsibility-section">
+                            <div class="responsibility-title">Main Function</div>
+                            <ul class="responsibility-list">
+                                <li class="responsibility-item">Drive strategic vision and lead high-value client relationships</li>
+                            </ul>
+                        </div>
+
+                        <div class="responsibility-section">
+                            <div class="responsibility-title">Client Leadership</div>
+                            <ul class="responsibility-list">
+                                <li class="responsibility-item">Manage portfolio of top-tier clients</li>
+                                <li class="responsibility-item">Serve as senior advisor to client C-suite</li>
+                                <li class="responsibility-item">Drive account retention and growth</li>
+                                <li class="responsibility-item">Identify and pursue upsell opportunities</li>
+                            </ul>
+                        </div>
+
+                        <div class="responsibility-section">
+                            <div class="responsibility-title">Strategic Development</div>
+                            <ul class="responsibility-list">
+                                <li class="responsibility-item">Create innovative PR strategies and campaigns</li>
+                                <li class="responsibility-item">Lead crisis communications planning</li>
+                                <li class="responsibility-item">Develop thought leadership programs</li>
+                                <li class="responsibility-item">Shape brand positioning strategies</li>
+                            </ul>
+                        </div>
+
+                        <div class="responsibility-section">
+                            <div class="responsibility-title">Media Excellence</div>
+                            <ul class="responsibility-list">
+                                <li class="responsibility-item">Maintain elite Tier 1 media relationships</li>
+                                <li class="responsibility-item">Secure premium placements and exclusives</li>
+                                <li class="responsibility-item">Act as media spokesperson when needed</li>
+                            </ul>
+                        </div>
+
+                        <div class="responsibility-section">
+                            <div class="responsibility-title">Team Development</div>
+                            <ul class="responsibility-list">
+                                <li class="responsibility-item">Lead and mentor account teams</li>
+                                <li class="responsibility-item">Conduct performance reviews</li>
+                                <li class="responsibility-item">Develop junior staff capabilities</li>
+                                <li class="responsibility-item">Foster team culture and excellence</li>
+                            </ul>
+                        </div>
+
+                        <div class="responsibility-section">
+                            <div class="responsibility-title">Business Development</div>
+                            <ul class="responsibility-list">
+                                <li class="responsibility-item">Lead new business pitches</li>
+                                <li class="responsibility-item">Contribute to agency growth strategy</li>
+                                <li class="responsibility-item">Represent agency at industry events</li>
+                                <li class="responsibility-item">Build agency reputation and network</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const roleCards = document.querySelectorAll('.role-card');
+
+        roleCards.forEach(card => {
+            const details = card.querySelector('.role-details');
+
+            const toggleDetails = () => {
+                // Close all other dropdowns
+                roleCards.forEach(otherCard => {
+                    if (otherCard !== card) {
+                        otherCard.querySelector('.role-details').classList.remove('active');
+                        otherCard.classList.remove('active');
+                    }
+                });
+                
+                // Toggle this dropdown
+                details.classList.toggle('active');
+                card.classList.toggle('active');
+            };
+
+            // Make entire card clickable
+            card.addEventListener('click', (e) => {
+                e.stopPropagation();
+                toggleDetails();
+            });
+
+            // Prevent clicks inside dropdown from closing it
+            details.addEventListener('click', (e) => {
+                e.stopPropagation();
+            });
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', () => {
+            roleCards.forEach(card => {
+                card.querySelector('.role-details').classList.remove('active');
+                card.classList.remove('active');
+            });
+        });
+
+        // Close dropdown with Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                roleCards.forEach(card => {
+                    card.querySelector('.role-details').classList.remove('active');
+                    card.classList.remove('active');
+                });
+            }
+        });
+    </script>
+</body>
+</html>
